@@ -1,0 +1,13 @@
+version: '3.8'
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: rag_vector_db
+    ports:
+      - "6333:6333"      # HTTP API
+      - "6334:6334"      # gRPC API
+    volumes:
+      # This is the "volume attached" part. 
+      # Maps local folder ./qdrant_storage to container's /qdrant/storage
+      - ./qdrant_storage:/qdrant/storage
+    restart: always

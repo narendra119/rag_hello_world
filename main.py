@@ -1,4 +1,5 @@
 import ollama
+from vector_db import init_collection, add_chunk_to_database, client, COLLECTION_NAME, create_embedding
 
 dataset = []
 with open('cat-facts.txt', 'r') as file:
@@ -8,14 +9,9 @@ with open('cat-facts.txt', 'r') as file:
 EMBEDDING_MODEL = 'nomic-embed-text'
 LANGUAGE_MODEL = 'llama3.2:3b'
 
-# Each element in the VECTOR_DB will be a tuple (chunk, embedding)
-# The embedding is a list of floats, for example: [0.1, 0.04, -0.34, 0.21, ...]
-VECTOR_DB = []
-
-
-def add_chunk_to_database(chunk):
-  embedding = ollama.embed(model=EMBEDDING_MODEL, input=chunk)['embeddings'][0]
-  VECTOR_DB.append((chunk, embedding))
+# Initialize Qdrant collection
+init_collection()
+print(f'Initialized Qdrant collection: {COLLECTION_NAME}')
 
 
 def cosine_similarity(a, b):
@@ -26,16 +22,18 @@ def cosine_similarity(a, b):
 
 
 def retrieve(query, top_n=3):
-  query_embedding = ollama.embed(model=EMBEDDING_MODEL, input=query)['embeddings'][0]
-  # temporary list to store (chunk, similarity) pairs
-  similarities = []
-  for chunk, embedding in VECTOR_DB:
-    similarity = cosine_similarity(query_embedding, embedding)
-    similarities.append((chunk, similarity))
-  # sort by similarity in descending order, because higher similarity means more relevant chunks
-  similarities.sort(key=lambda x: x[1], reverse=True)
-  # finally, return the top N most relevant chunks
-  return similarities[:top_n]
+  query_embedding = create_embedding(query)
+  
+  # Search in Qdrant using query_points
+  search_result = client.query_points(
+    collection_name=COLLECTION_NAME,
+    query=query_embedding,
+    limit=top_n
+  )
+  
+  # Extract chunks and scores
+  results = [(point.payload["text"], point.score) for point in search_result.points]
+  return results
 
 
 for i, chunk in enumerate(dataset):

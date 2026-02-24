@@ -48,6 +48,9 @@ coverage.xml
 *.cover
 *.py.cover
 .hypothesis/
+
+# Qdrant vector database storage
+qdrant_storage/
 .pytest_cache/
 cover/
 
